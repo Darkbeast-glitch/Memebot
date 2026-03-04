@@ -6,12 +6,13 @@ Usage:
 
 Flow for each unprocessed PairSnapshot:
     1. Check token age >= 2 minutes
-    2. Call rug-check-mcp for safety flags
+    2. Fetch safety flags from RugCheck.xyz
     3. Run hard risk filters
-    4. Run behaviour analysis
-    5. Score the token
-    6. Save TokenScore
-    7. Send Telegram alert if score >= threshold
+    4. Fetch on-chain trade events from Solana RPC
+    5. Run behaviour analysis (wash-trading detection)
+    6. Score the token
+    7. Save TokenScore
+    8. Send Telegram alert if score >= threshold
 """
 
 import logging
@@ -23,6 +24,7 @@ from scanner.models import Token, PairSnapshot
 from risk.filters import fetch_token_flags, run_hard_filters, RateLimitError
 from behaviour.engine import behaviour_pass
 from behaviour.models import TradeEvent
+from behaviour.services.solana_trades import fetch_trades_for_token
 from scoring.engine import score_token
 from scoring.models import TokenScore
 from alerts.telegram import send_alert
@@ -107,7 +109,42 @@ class Command(BaseCommand):
                 )
                 continue
 
-            # Step 3: Behaviour analysis
+            # Step 3: Fetch on-chain trades & run behaviour analysis
+            existing_events = TradeEvent.objects.filter(token=token).count()
+            if existing_events == 0:
+                # No trade data yet — fetch from Solana RPC
+                self.stdout.write(f"     Fetching on-chain trades from Solana RPC...")
+                try:
+                    raw_trades = fetch_trades_for_token(
+                        mint=token.mint,
+                        pair_address=latest_snap.pair_address,
+                        limit=30,
+                    )
+                    if raw_trades:
+                        # Bulk create TradeEvent records
+                        trade_objs = [
+                            TradeEvent(
+                                token=token,
+                                wallet=t["wallet"],
+                                side=t["side"],
+                                amount=t["amount"],
+                                timestamp=t["timestamp"],
+                            )
+                            for t in raw_trades
+                        ]
+                        TradeEvent.objects.bulk_create(trade_objs, ignore_conflicts=True)
+                        self.stdout.write(
+                            f"     Saved {len(trade_objs)} trade events "
+                            f"({sum(1 for t in raw_trades if t['side']=='buy')} buys, "
+                            f"{sum(1 for t in raw_trades if t['side']=='sell')} sells)"
+                        )
+                    else:
+                        self.stdout.write(f"     No on-chain trades found")
+                except Exception as e:
+                    self.stdout.write(
+                        self.style.WARNING(f"     Failed to fetch trades: {e}")
+                    )
+
             events = list(TradeEvent.objects.filter(token=token).order_by("timestamp")[:20])
             behaviour_passed, behaviour_reasons = behaviour_pass(events)
 
