@@ -11,6 +11,7 @@ class Token(models.Model):
 
     is_rejected = models.BooleanField(default=False)
     alert_sent = models.BooleanField(default=False)
+    safety_flags = models.JSONField(null=True, blank=True, help_text="Cached Solsniffer response")
     last_scored_snapshot = models.ForeignKey(
         'PairSnapshot', null=True, blank=True, on_delete=models.SET_NULL,
         related_name='scored_tokens',

@@ -20,7 +20,7 @@ from django.utils import timezone
 from datetime import timedelta
 
 from scanner.models import Token, PairSnapshot
-from risk.filters import fetch_token_flags, run_hard_filters
+from risk.filters import fetch_token_flags, run_hard_filters, RateLimitError
 from behaviour.engine import behaviour_pass
 from behaviour.models import TradeEvent
 from scoring.engine import score_token
@@ -69,15 +69,32 @@ class Command(BaseCommand):
 
             self.stdout.write(f"  🔍 Processing {token.symbol} ({token.mint[:12]}...)")
 
-            # Step 1: Fetch safety flags from rug-check-mcp
-            flags = fetch_token_flags(token.mint)
+            # Step 1: Use cached safety flags, or fetch from Solsniffer
+            if token.safety_flags:
+                flags = token.safety_flags
+                self.stdout.write(f"     (using cached Solsniffer data)")
+            else:
+                try:
+                    flags = fetch_token_flags(token.mint)
+                except RateLimitError:
+                    self.stdout.write(
+                        self.style.ERROR(
+                            f"  🛑 Rate-limited by RugCheck — stopping this cycle. "
+                            f"Will resume next run."
+                        )
+                    )
+                    break   # stop the entire loop, try again next cycle
 
-            # If rug-check-mcp is down, skip (don't reject) — retry next run
-            if flags is None:
-                self.stdout.write(
-                    self.style.WARNING(f"  ⏭️  {token.symbol} skipped: Solsniffer unavailable (will retry)")
-                )
-                continue
+                # If Solsniffer is down (non-429), skip this token
+                if flags is None:
+                    self.stdout.write(
+                        self.style.WARNING(f"  ⏭️  {token.symbol} skipped: RugCheck unavailable (will retry)")
+                    )
+                    continue
+
+                # Cache the flags so we never re-fetch this token
+                token.safety_flags = flags
+                token.save(update_fields=["safety_flags"])
 
             # Step 2: Run hard filters
             hard_pass, hard_reasons = run_hard_filters(latest_snap, flags)
