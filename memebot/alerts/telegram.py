@@ -56,8 +56,9 @@ def send_alert(token, snapshot, score: int, breakdown: dict):
         f"Traders 1h: {snapshot.traders_1h}\n"
         f"Price Δ 5m: {_esc(p5m)}\n\n"
         f"Breakdown:\n{breakdown_lines}\n\n"
-        f"[View on Dexscreener]({dex_url})"
     )
+
+    message += f"[View on Dexscreener]({dex_url})"
 
     try:
         res = requests.post(

@@ -13,7 +13,8 @@ interface TokenTableProps {
   loading?: boolean
 }
 
-function getScoreBadgeColor(score: number) {
+function getScoreBadgeColor(score: number | null) {
+  if (score === null) return 'bg-slate-900/40 text-slate-300 border-slate-700/50'
   if (score >= 12) return 'bg-green-900/40 text-green-300 border-green-700/50'
   if (score >= 10) return 'bg-yellow-900/40 text-yellow-300 border-yellow-700/50'
   return 'bg-red-900/40 text-red-300 border-red-700/50'
@@ -92,7 +93,7 @@ export default function TokenTable({
                   key={token.mint}
                   onClick={() => onSelectToken(token)}
                   className={`border-b border-border transition-colors cursor-pointer hover:bg-secondary/20
-                    ${token.score >= 12 ? 'bg-green-900/10' : token.score >= 10 ? 'bg-yellow-900/10' : ''}
+                    ${(token.score ?? 0) >= 12 ? 'bg-green-900/10' : (token.score ?? 0) >= 10 ? 'bg-yellow-900/10' : ''}
                     ${selectedToken?.mint === token.mint ? 'bg-accent/20' : ''}
                   `}
                 >
@@ -109,7 +110,7 @@ export default function TokenTable({
                       variant="secondary"
                       className={`${getScoreBadgeColor(token.score)} border`}
                     >
-                      {token.score}/14
+                      {token.score !== null ? `${token.score}/14` : '—'}
                     </Badge>
                   </td>
                   <td className="px-4 py-3 text-right font-mono text-foreground">

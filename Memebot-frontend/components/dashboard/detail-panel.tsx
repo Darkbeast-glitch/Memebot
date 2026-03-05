@@ -55,14 +55,16 @@ export default function DetailPanel({ token }: DetailPanelProps) {
             <Badge
               variant="secondary"
               className={
-                token.score >= 12
-                  ? 'bg-green-900/40 text-green-300 border-green-700/50 border text-lg px-3 py-1'
-                  : token.score >= 10
-                    ? 'bg-yellow-900/40 text-yellow-300 border-yellow-700/50 border text-lg px-3 py-1'
-                    : 'bg-red-900/40 text-red-300 border-red-700/50 border text-lg px-3 py-1'
+                token.score === null
+                  ? 'bg-slate-900/40 text-slate-300 border-slate-700/50 border text-lg px-3 py-1'
+                  : token.score >= 12
+                    ? 'bg-green-900/40 text-green-300 border-green-700/50 border text-lg px-3 py-1'
+                    : token.score >= 10
+                      ? 'bg-yellow-900/40 text-yellow-300 border-yellow-700/50 border text-lg px-3 py-1'
+                      : 'bg-red-900/40 text-red-300 border-red-700/50 border text-lg px-3 py-1'
               }
             >
-              {token.score}/14
+              {token.score !== null ? `${token.score}/14` : 'Pending'}
             </Badge>
           </div>
         </div>

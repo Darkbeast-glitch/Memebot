@@ -3,7 +3,7 @@ export interface Token {
   mint: string
   symbol: string
   name: string
-  score: number
+  score: number | null
   breakdown: Record<string, number>
   liquidity_usd: number | null
   volume_24h: number | null
@@ -15,9 +15,19 @@ export interface Token {
   behaviour_passed: boolean
   dexscreener_url: string | null
   alert_sent: boolean
+  is_rejected: boolean
+  source: string
 }
 
 export interface TokensApiResponse {
   count: number
   results: Token[]
+}
+
+export interface DashboardStats {
+  total_discovered: number
+  total_scored: number
+  total_rejected: number
+  total_alerted: number
+  top_picks: number
 }

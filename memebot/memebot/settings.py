@@ -150,3 +150,6 @@ SOLSNIFFER_API_KEY = os.getenv("SOLSNIFFER_API_KEY", "")
 # --- Telegram ---
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
+
+# --- Gemini AI (free tier: 15 RPM, 1M tokens/day) ---
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
